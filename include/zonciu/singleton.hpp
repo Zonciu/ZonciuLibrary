@@ -10,17 +10,9 @@
 #ifndef ZONCIU_SINGKETON_HPP
 #define ZONCIU_SINGKETON_HPP
 #include <atomic>
+#include <zonciu/nocopyable.hpp>
 namespace zonciu
 {
-class noncopyable
-{
-protected:
-    noncopyable() {}
-    ~noncopyable() {}
-private:  // emphasize the following members are private  
-    noncopyable(const noncopyable&);
-    const noncopyable& operator=(const noncopyable&);
-};
 namespace singleton
 {
 template<class T>
@@ -63,7 +55,7 @@ public:
         _Get().flag.clear();
     }
 private:
-    static Instance& _Get()
+    inline static Instance& _Get()
     {
         static Instance ins_;
         return ins_;
@@ -75,8 +67,9 @@ private:
     Singleton& operator = (const Singleton&);
     static Creator creator_;
 };
+// SINGLETON_INIT_BEFORE_MAIN(class,param_1,param_2,...);
 #define SINGLETON_INIT_BEFORE_MAIN(type,...) \
 template<> typename zonciu::Singleton<type>::Creator zonciu::Singleton<type>::creator_ = {__VA_ARGS__}
-}
-}
+} // namespace singleton
+} // namespace zonciu
 #endif

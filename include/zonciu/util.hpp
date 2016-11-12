@@ -1,14 +1,13 @@
-/*!
- *
- * \author Zonciu
- * Contact: zonciu@zonciu.com
- *
- * \brief
- * Tools collection, written by Zonciu
- * \note
+/*
+* Copyright(c) 2016 Zonciu Liang.All rights reserved.
+* Use of this source code is governed by a BSD-style license that can be
+* found in the LICENSE file.
+*
+* Author:  Zonciu Liang
+* Contract: zonciu@zonciu.com
 */
-#ifndef ZONCIU_TOOLS_H
-#define ZONCIU_TOOLS_H
+#ifndef ZONCIU_UTIL_H
+#define ZONCIU_UTIL_H
 
 #include <string>
 #include <chrono>
@@ -18,13 +17,22 @@
 
 namespace zonciu
 {
-///////////////////////////////////////////////////////////////////////////////
-//std::this_thread::sleep_for
-inline void Sleep(unsigned long milli_seconds)
+namespace util
 {
-    std::this_thread::sleep_for(std::chrono::milliseconds(milli_seconds));
+inline void Sleep(unsigned int ms)
+{
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
-///////////////////////////////////////////////////////////////////////////////
+inline void uSleep(unsigned int us)
+{
+    auto start = std::chrono::high_resolution_clock::now();
+    auto end = start + std::chrono::microseconds(us);
+    do
+    {
+        std::this_thread::yield();
+    } while (std::chrono::high_resolution_clock::now() < end);
+}
+
 //T = duration types
 template<typename T = std::chrono::seconds>
 inline auto GetTimeStamp()
@@ -32,7 +40,7 @@ inline auto GetTimeStamp()
     return std::chrono::duration_cast<T>(
         std::chrono::system_clock::now().time_since_epoch()).count();
 }
-///////////////////////////////////////////////////////////////////////////////
+
 //Convert to Uppercase hex string
 template<class T>
 inline std::string ToHex(const T* const _ptr, size_t _size)
@@ -60,7 +68,6 @@ inline std::string ToHex(const T* const _ptr, size_t _size)
     }
     return _hexbuf;
 }
-///////////////////////////////////////////////////////////////////////////////
-}
-
+} // namespace util
+} // namespace zonciu
 #endif
