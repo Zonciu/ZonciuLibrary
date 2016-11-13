@@ -4,14 +4,15 @@
  * Contact: zonciu@zonciu.com
  * BSD license.
  * \brief
- * Jeff Preshing's semaphore implementation (under the terms of its separate 
+ * Jeff Preshing's semaphore implementation (under the terms of its separate
  * zlib license, embedded below).
  * Code from moodycamel::BlockingConcurrentQueue
  * \note
 */
 #ifndef ZONCIU_SEMAPHORE_H
 #define ZONCIU_SEMAPHORE_H
-
+#include <assert.h>
+#include <stdint.h>
 #if defined(_WIN32)
 // Avoid including windows.h in a header; we only need a handful of
 // items, so we'll redeclare them here (this is relatively safe since
@@ -40,9 +41,9 @@ class Semaphore
 {
 private:
     void* m_hSema;
-    
-    Semaphore(const Semaphore& other) MOODYCAMEL_DELETE_FUNCTION;
-    Semaphore& operator=(const Semaphore& other) MOODYCAMEL_DELETE_FUNCTION;
+
+    Semaphore(const Semaphore&) = delete;
+    Semaphore& operator=(const Semaphore&) = delete;
 
 public:
     Semaphore(int initialCount = 0)
@@ -69,7 +70,7 @@ public:
         return WaitForSingleObject(m_hSema, 0) != RC_WAIT_TIMEOUT;
     }
 
-    bool timed_wait(std::uint64_t usecs)
+    bool timed_wait(unsigned long long usecs)
     {
         const unsigned long RC_WAIT_TIMEOUT = 0x00000102;
         return WaitForSingleObject(m_hSema, (unsigned long)(usecs / 1000)) != RC_WAIT_TIMEOUT;
@@ -90,8 +91,8 @@ class Semaphore
 private:
     semaphore_t m_sema;
 
-    Semaphore(const Semaphore& other) MOODYCAMEL_DELETE_FUNCTION;
-    Semaphore& operator=(const Semaphore& other) MOODYCAMEL_DELETE_FUNCTION;
+    Semaphore(const Semaphore& other) = delete;
+    Semaphore& operator=(const Semaphore& other) = delete;
 
 public:
     Semaphore(int initialCount = 0)
@@ -115,7 +116,7 @@ public:
         return timed_wait(0);
     }
 
-    bool timed_wait(std::uint64_t timeout_usecs)
+    bool timed_wait(unsigned long long timeout_usecs)
     {
         mach_timespec_t ts;
         ts.tv_sec = timeout_usecs / 1000000;
@@ -149,8 +150,8 @@ class Semaphore
 private:
     sem_t m_sema;
 
-    Semaphore(const Semaphore& other) MOODYCAMEL_DELETE_FUNCTION;
-    Semaphore& operator=(const Semaphore& other) MOODYCAMEL_DELETE_FUNCTION;
+    Semaphore(const Semaphore& other) = delete;
+    Semaphore& operator=(const Semaphore& other) = delete;
 
 public:
     Semaphore(int initialCount = 0)
@@ -184,7 +185,7 @@ public:
         return !(rc == -1 && errno == EAGAIN);
     }
 
-    bool timed_wait(std::uint64_t usecs)
+    bool timed_wait(unsigned long long usecs)
     {
         struct timespec ts;
         const int usecs_in_1_sec = 1000000;

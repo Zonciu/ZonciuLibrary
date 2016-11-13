@@ -12,7 +12,7 @@
 
 #include "zonciu/3rd/concurrentqueue/blockingconcurrentqueue.h"
 #include "zonciu/spinlock.hpp"
-#include "zonciu/util.hpp"
+#include "zonciu/semaphor.hpp"
 #include <functional>
 #include <atomic>
 #include <map>
@@ -77,13 +77,7 @@ public:
         observer_.join();
         queue_.enqueue([]() {});
         worker_.join();
-        Job* tmp = nullptr;
-        while (!jobs_.empty())
-        {
-            tmp = jobs_.top();
-            jobs_.pop();
-            delete tmp;
-        }
+        StopAll();
     }
     //Wait and run
     //Return timer_id
@@ -98,6 +92,7 @@ public:
         jobs_lock_.Lock();
         jobs_.push(tmp);
         jobs_lock_.UnLock();
+        waiter_.signal();
         return ret_id;
     }
     //Wait and run once
@@ -113,6 +108,7 @@ public:
         jobs_lock_.Lock();
         jobs_.push(tmp);
         jobs_lock_.UnLock();
+        waiter_.signal();
         return ret_id;
     }
     void StopTimer(unsigned int _job_id)
@@ -122,6 +118,7 @@ public:
         if (it != jobs_id_.end())
             it->second->flag = Flag::stop;
         id_lock_.UnLock();
+        waiter_.signal();
     }
     void StopAll()
     {
@@ -137,24 +134,22 @@ public:
         jobs_id_.clear();
         jobs_lock_.UnLock();
         id_lock_.UnLock();
+        waiter_.signal();
     }
 private:
     MinHeapTimer(const MinHeapTimer&) = delete;
     MinHeapTimer(MinHeapTimer&&) = delete;
     void _Observe()
     {
-        using namespace std::chrono;
-        const duration<int, std::micro> tick(10);
+        /*const std::chrono::duration<int, std::micro> tick(10);*/
         Job* top = nullptr;
         while (!destruct_)
         {
-
             jobs_lock_.Lock();
-            while (!jobs_.empty())
+            if (!jobs_.empty())
             {
-                if (jobs_.top()->next_time <= _Now())
+                for (top = jobs_.top();top->next_time <= _Now();top = jobs_.top())
                 {
-                    top = jobs_.top();
                     jobs_.pop();
                     switch (top->flag)
                     {
@@ -184,13 +179,18 @@ private:
                         }
                     }
                 }
-                else
+                if (jobs_.top()->next_time > _Now())
                 {
-                    break;
+                    auto wait_time = jobs_.top()->next_time - _Now();
+                    waiter_.timed_wait((wait_time > 0) ? wait_time : 0);
                 }
+                jobs_lock_.UnLock();
             }
-            jobs_lock_.UnLock();
-            std::this_thread::sleep_for(tick);
+            else
+            {
+                jobs_lock_.UnLock();
+                waiter_.wait();
+            }
         }
     }
     void _Work()
@@ -208,6 +208,7 @@ private:
         return duration_cast<microseconds>(
             high_resolution_clock::now().time_since_epoch()).count();
     };
+    zonciu::semaphore::Semaphore waiter_;
     zonciu::SpinLock id_lock_;
     zonciu::SpinLock jobs_lock_;
     std::atomic<int> jobs_id_count_;
