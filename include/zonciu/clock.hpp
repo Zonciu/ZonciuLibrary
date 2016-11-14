@@ -1,5 +1,5 @@
 /*!
- * 
+ *
  * \author Zonciu
  * Contact: zonciu@zonciu.com
  *
@@ -16,24 +16,21 @@ namespace zonciu
 class Clock
 {
 public:
-    Clock() { Begin(); }
-    void Begin() { begin_ = std::chrono::high_resolution_clock::now(); }
-    void End()
-    {
-        elapse_ = std::chrono::high_resolution_clock::now() - begin_;
-    }
+    Clock() { begin(); }
+    void begin() { begin_ = std::chrono::high_resolution_clock::now(); }
+    void end() { end_ = std::chrono::high_resolution_clock::now() - begin_; }
     //\default second
     //\std::milli -> millisecond
     //\std::micro -> microsecond
     //\std::nano  -> nanosecond
     template<typename T = std::ratio<1, 1>>
-    auto Elapsed()
+    auto get()
     {
-        return std::chrono::duration<double, T>(elapse_).count();
+        return std::chrono::duration<double, T>(end_).count();
     }
 private:
     mutable std::chrono::high_resolution_clock::time_point begin_;
-    mutable std::chrono::nanoseconds elapse_;
+    mutable std::chrono::nanoseconds end_;
 };
 }
 #endif

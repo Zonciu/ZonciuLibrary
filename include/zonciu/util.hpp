@@ -19,11 +19,11 @@ namespace zonciu
 {
 namespace util
 {
-inline void Sleep(unsigned int ms)
+inline void sleep(unsigned int ms)
 {
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
-inline void uSleep(unsigned int us)
+inline void usleep(unsigned int us)
 {
     auto start = std::chrono::high_resolution_clock::now();
     auto end = start + std::chrono::microseconds(us);
@@ -35,7 +35,7 @@ inline void uSleep(unsigned int us)
 
 //T = duration types
 template<typename T = std::chrono::seconds>
-inline auto GetTimeStamp()
+inline auto timestamp()
 {
     return std::chrono::duration_cast<T>(
         std::chrono::system_clock::now().time_since_epoch()).count();
@@ -43,10 +43,10 @@ inline auto GetTimeStamp()
 
 //Convert to Uppercase hex string
 template<class T>
-inline std::string ToHex(const T* const _ptr, size_t _size)
+inline std::string to_hex(const T* const _ptr, size_t _size)
 {
     const unsigned char* _tp = reinterpret_cast<const unsigned char*>(_ptr);
-    static char base[] = {
+    static const char base[] = {
         '0','1','2','3',
         '4','5','6','7',
         '8','9','A','B',

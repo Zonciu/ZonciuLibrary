@@ -11,9 +11,11 @@
 #define ZONCIU_SECURITY_HPP
 #include "zonciu/typedef.hpp"
 #include "zonciu/random.hpp"
+#include <string>
+#include <vector>
 namespace zonciu{
 //Token length must be less than 65535, use default dictionary [a-zA-Z0-9]
-inline std::string MakeToken(uint16_t length)
+inline std::string make_token(uint16_t length)
 {
     static const byte dictionary[62] = {
         '0','1','2','3','4','5','6','7','8','9',
@@ -33,7 +35,7 @@ inline std::string MakeToken(uint16_t length)
     return _token;
 }
 //Token length must be less than 65535, you can use your own dictionary.
-inline std::string MakeToken(uint16_t length,
+inline std::string make_token(uint16_t length,
     const std::vector<uint8_t>& dictionary)
 {
     if (dictionary.empty())
@@ -43,7 +45,7 @@ inline std::string MakeToken(uint16_t length,
     _token.resize(length);
     for (auto&&val : _token)
     {
-        val = dictionary.at(zonciu::Random::Make<size_t>(0, dict_end));
+        val = dictionary.at(zonciu::Random::make<size_t>(0, dict_end));
     }
     return std::move(_token);
 }

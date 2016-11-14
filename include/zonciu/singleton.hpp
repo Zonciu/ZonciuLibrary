@@ -10,23 +10,22 @@
 #ifndef ZONCIU_SINGKETON_HPP
 #define ZONCIU_SINGKETON_HPP
 #include <atomic>
-#include <zonciu/nocopyable.hpp>
 namespace zonciu
 {
 namespace singleton
 {
 template<class T>
-class Singleton : public zonciu::noncopyable
+class Singleton
 {
 private:
     struct Creator
     {
         template<class...Args>
-        Creator(Args&&...args) { Init(std::forward<Args>(args)...); }
+        Creator(Args&&...args) { init(std::forward<Args>(args)...); }
     };
     struct GC
     {
-        ~GC() { Singleton<T>::Destroy(); }
+        ~GC() { Singleton<T>::destroy(); }
     };
     struct Instance
     {
@@ -35,41 +34,41 @@ private:
     };
 public:
     template<class...Args>
-    static inline T& Init(Args&&...args)
+    static T& init(Args&&...args)
     {
         static GC _gc;
-        if (!_Get().flag.test_and_set())
-            _Get().instance = new T(std::forward<Args>(args)...);
-        return *_Get().instance;
+        if (!_get().flag.test_and_set())
+            _get().instance = new T(std::forward<Args>(args)...);
+        return *_get().instance;
     }
-    static inline T& Get()
+    static T& get()
     {
-        while (!_Get().instance) {}
-        assert(_Get().instance != nullptr);
-        return *_Get().instance;
+        while (!_get().instance) {}
+        assert(_get().instance != nullptr);
+        return *_get().instance;
     }
-    static inline void Destroy()
+    static void destroy()
     {
-        delete _Get().instance;
-        _Get().instance = nullptr;
-        _Get().flag.clear();
+        delete _get().instance;
+        _get().instance = nullptr;
+        _get().flag.clear();
     }
 private:
-    inline static Instance& _Get()
+    static Instance& _get()
     {
         static Instance ins_;
         return ins_;
     }
     Singleton();
     ~Singleton();
-    Singleton(const Singleton&);
-    Singleton(Singleton&&);
-    Singleton& operator = (const Singleton&);
+    Singleton(const Singleton&) = delete;
+    const Singleton& operator=(const Singleton&) = delete;
+    Singleton(Singleton&&) = delete;
     static Creator creator_;
 };
 // SINGLETON_INIT_BEFORE_MAIN(class,param_1,param_2,...);
 #define SINGLETON_INIT_BEFORE_MAIN(type,...) \
-template<> typename zonciu::Singleton<type>::Creator zonciu::Singleton<type>::creator_ = {__VA_ARGS__}
+template<> typename zonciu::singleton::Singleton<type>::Creator zonciu::singleton::Singleton<type>::creator_ = {__VA_ARGS__}
 } // namespace singleton
 } // namespace zonciu
 #endif

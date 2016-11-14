@@ -4,6 +4,7 @@
 #include "3rd/concurrentqueue/blockingconcurrentqueue.h"
 #include "zonciu/format.hpp"
 #include "mysql.h"
+#include <assert.h>
 #include <array>
 #include <atomic>
 #include <string>
@@ -13,34 +14,25 @@ namespace zonciu
 {
 namespace mysql
 {
-enum
-{
-    non_block_while_empty,
-    block_while_empty
-};
 struct DbConfig
 {
     unsigned short port;
     unsigned int min_connection;
     unsigned int max_connection;
-    bool block_option;
     std::string host;
     std::string username;
     std::string password;
     std::string database;
-    DbConfig() {};
+    DbConfig() {}
     DbConfig(
         const std::string& _host, const unsigned short& _port,
         const std::string& _username, const std::string& _password,
         const std::string& _database,
-        const unsigned int _min_size, const unsigned int _max_size,
-        const bool _block_option = block_while_empty)
+        const unsigned int _min_size, const unsigned int _max_size)
         :
-        host(_host), port(_port),
-        username(_username), password(_password),
-        database(_database), block_option(_block_option),
-        min_connection(_min_size), max_connection(_max_size)
-    {};
+        host(_host), port(_port), username(_username), password(_password),
+        database(_database), min_connection(_min_size), max_connection(_max_size)
+    {}
 };
 
 namespace detail
@@ -77,7 +69,7 @@ public:
     {
         current_size_ = 0;
         mysql_library_init(0, 0, 0);
-        _Init(config_.min_connection);
+        _init(config_.min_connection);
     }
     ~ConnectionPool()
     {
@@ -85,172 +77,102 @@ public:
         mysql_library_end();
 #endif
     }
-    Connection GetConnection()
+    Connection get()
     {
-        Connection _conn;
+        Connection conn;
         //Pool has conn
-        if (pool_.try_dequeue(_conn))
+        if (pool_.try_dequeue(conn))
         {
-            return _conn;
+            return conn;
         }
         else if (current_size_ < config_.max_connection)
         {
             //Allow create new conn
-            _conn = _CreateConnection();
+            conn = _make();
             ++current_size_;
-            return _conn;
+            return conn;
         }
         else
         {
             //Number of conn is reach maxSize
-            if (config_.block_option == block_while_empty)
-            {
-                pool_.wait_dequeue(_conn);
-                return _conn;
-            }
-            else
-                return _conn;
+            pool_.wait_dequeue(conn);
+            return conn;
         }
     }
-    void ReleaseConnection(Connection&& _conn)
+    void release(Connection&& _conn)
     {
         pool_.enqueue(std::move(_conn));
     }
 
 private:
-    void _Init(const unsigned int& _init_size)
+    void _init(const unsigned int& _init_size)
     {
         for (unsigned int i = 0;i < _init_size;++i)
         {
-            pool_.enqueue(std::move(_CreateConnection()));
+            pool_.enqueue(std::move(_make()));
             ++current_size_;
         }
     }
-    Connection _CreateConnection()
+    Connection _make()
     {
-        Connection _conn(mysql_init(0));
+        Connection conn(mysql_init(0));
 
-        if (
-            mysql_real_connect(
-            *_conn, config_.host.c_str(),
+        if (mysql_real_connect(*conn, config_.host.c_str(),
             config_.username.c_str(), config_.password.c_str(),
             config_.database.c_str(), config_.port, 0, 0))
         {
-            my_bool _reconnect = 1;
-            mysql_options(*_conn, MYSQL_OPT_RECONNECT, &_reconnect);
-            return _conn;
+            my_bool reconnect = 1;
+            mysql_options(*conn, MYSQL_OPT_RECONNECT, &reconnect);
+            return conn;
         }
         else
         {
             throw std::runtime_error(
                 fmt::format("[mysqlcpp] Connect failed: {}",
-                mysql_error(*_conn)));
+                mysql_error(*conn)));
         }
     }
     const DbConfig config_;
-    std::atomic_uint32_t current_size_;
+    std::atomic<unsigned int> current_size_;
     moodycamel::BlockingConcurrentQueue<Connection> pool_;
 };
 class ResultValue
 {
 public:
     ResultValue() :
-        is_null_(true) {}
+        null_(true) {}
     ResultValue(const char* _obj) :
         data_((_obj == nullptr) ? "" : _obj),
-        is_null_(_obj == nullptr)
+        null_(_obj == nullptr)
     {}
     ResultValue(ResultValue&& p) :
-        is_null_(std::move(p.is_null_)),
+        null_(std::move(p.null_)),
         data_(std::move(p.data_))
     {}
-    ResultValue&operator=(ResultValue&&other)
+    ResultValue& operator=(ResultValue&& other)
     {
         if (this != &other)
         {
-            is_null_ = std::move(other.is_null_);
+            null_ = std::move(other.null_);
             data_ = std::move(other.data_);
         }
         return (*this);
     }
-    bool operator==(const ResultValue& _other)
-    {
-        return this->data_ == _other.data_;
-    }
-    bool operator!=(const ResultValue& _other)
-    {
-        return this->data_ != _other.data_;
-    }
-    bool IsNull() { return is_null_; }
-    bool IsEmpty() { return data_.empty(); }
-    const std::string& GetString() { return data_; }
-    int GetInt32()
-    {
-        try { return std::stoi(data_); }
-        catch (const std::exception& e)
-        {
-            throw std::runtime_error(
-                fmt::format("[ResultValue] {} can't convert to int: {}",
-                data_, e.what()));
-        }
-    }
-    unsigned int GetUint32()
-    {
-        try { return std::stoul(data_); }
-        catch (const std::exception& e)
-        {
-            throw std::runtime_error(
-                fmt::format("[ResultValue] {} "
-                "can't convert to unsigned int: {}", data_, e.what()));
-        }
-    }
-    long long GetInt64()
-    {
-        try { return std::stoll(data_); }
-        catch (const std::exception& e)
-        {
-            throw std::runtime_error(
-                fmt::format("[ResultValue] {} can't convert to long long/"
-                "Bigint: {}",
-                data_, e.what()));
-        }
-    }
-    unsigned long long GetUint64()
-    {
-        try { return std::stoull(data_); }
-        catch (const std::exception& e)
-        {
-            throw std::runtime_error(
-                fmt::format(
-                "[ResultValue] {} can't convert to unsigned long long/"
-                "unsigned Bigint: {}",
-                data_, e.what()));
-        }
-    }
-    float GetReal()
-    {
-        try { return std::stof(data_); }
-        catch (const std::exception& e)
-        {
-            throw std::runtime_error(
-                fmt::format("[ResultValue] {} can't convert to float/Real: {}",
-                data_, e.what()));
-        }
-    }
-    double GetDouble()
-    {
-        try { return std::stod(data_); }
-        catch (const std::exception& e)
-        {
-            throw std::runtime_error(
-                fmt::format("[ResultValue] {} can't convert to double: {}",
-                data_, e.what()));
-        }
-    }
-    bool GetBool() { return (data_.compare("1") == 0); }
+    bool operator==(const ResultValue& _ref) { return this->data_ == _ref.data_; }
+    bool operator!=(const ResultValue& _ref) { return this->data_ != _ref.data_; }
+    bool null() { return null_; }
+    bool empty() { return data_.empty(); }
+    const std::string& to_string() { return data_; }
+    int to_int32() { return std::stoi(data_); }
+    unsigned int to_uint32() { return std::stoul(data_); }
+    long long to_int64() { return std::stoll(data_); }
+    unsigned long long to_uint64() { return std::stoull(data_); }
+    float to_float() { return std::stof(data_); }
+    double to_double() { return std::stod(data_); }
+    bool to_bool() { return (data_.compare("1") == 0); }
 private:
     std::string data_;
-    bool is_null_;
+    bool null_;
 };
 typedef std::unordered_map<std::string, int> FieldType;
 //Result row for result group
@@ -269,10 +191,7 @@ public:
         field_(_field)
     {}
     ResultValue& operator[](const int& _str) { return row_.at(_str); }
-    ResultValue& operator[](const char* _str)
-    {
-        return row_.at(field_->find(_str)->second);
-    }
+    ResultValue& operator[](const char* _str) { return row_.at(field_->find(_str)->second); }
 private:
     RowType row_;
     FieldType* field_;
@@ -318,7 +237,7 @@ public:
     auto num_fields() { return field_->size(); }
     auto num_rows() { return result_.size(); }
     bool empty() { return result_.empty(); }
-    auto& operator[] (const int& _row) { return result_.at(_row); }
+    auto& operator[] (const int _row) { return result_.at(_row); }
     //return result[0][_field], used for single result;
     auto& operator[] (const char* _field)
     {
@@ -335,41 +254,41 @@ class MySql
 public:
     MySql(const DbConfig& _config) : pool_(_config) {}
     template <typename ...Args>
-    void Execute(Args &&... args)
+    void execute(Args &&... args)
     {
         //create sql sentence.
         auto str = fmt::format(std::forward<Args>(args)...);
         //get connection.
-        auto conn = pool_.GetConnection();
+        auto conn = pool_.get();
         //execute sql
         if (mysql_query(*conn, str.c_str()))
         {
             //if failed, print sql and error info, return empty result.
             std::string _error = fmt::format("[mysqlcpp] Query error:\nSql: {}\nError: {}\n",
                 str, mysql_error(*conn));
-            pool_.ReleaseConnection(std::move(conn));
+            pool_.release(std::move(conn));
             throw std::runtime_error(_error);
         }
-        pool_.ReleaseConnection(std::move(conn));
+        pool_.release(std::move(conn));
     }
     template <typename ...Args>
-    Result Query(Args &&... args)
+    Result query(Args &&... args)
     {
         //create sql sentence.
         auto str = fmt::format(std::forward<Args>(args)...);
         //get connection.
-        auto conn = pool_.GetConnection();
+        auto conn = pool_.get();
         //execute sql
         if (mysql_query(*conn, str.c_str()))
         {
             //if failed, print sql and error info, return empty result.
             std::string _error = fmt::format("[mysqlcpp] Query error:\nSql: {}\nError: {}\n",
                 str, mysql_error(*conn));
-            pool_.ReleaseConnection(std::move(conn));
+            pool_.release(std::move(conn));
             throw std::runtime_error(_error);
         }
         Result ret(mysql_use_result(*conn));
-        pool_.ReleaseConnection(std::move(conn));
+        pool_.release(std::move(conn));
         //return empty result if there is no result.
         return ret;
     }
@@ -382,24 +301,32 @@ private:
 class DbManager
 {
 public:
+    ~DbManager()
+    {
+        for (auto it = db_list_.begin();it != db_list_.end();)
+        {
+            delete it->second;
+            it = db_list_.erase(it);
+        }
+    }
     //return false when db name is existed.
-    bool Insert(const char* _name, const DbConfig& _config)
+    bool insert(const char* _name, const DbConfig& _config)
     {
         if (db_list_.find(_name) != db_list_.end())
             return false;
         else
         {
-            auto tmp = std::make_shared<zonciu::mysql::MySql>(_config);
-            db_list_.insert(std::make_pair(_name, std::move(tmp)));
+            db_list_.insert(std::make_pair(_name, new zonciu::mysql::MySql(_config)));
             return true;
         }
     }
     //return false when Db not found.
-    bool Remove(const char* _name)
+    bool remove(const char* _name)
     {
         auto it = db_list_.find(_name);
         if (it != db_list_.end())
         {
+            delete it->second;
             db_list_.erase(it);
             return true;
         }
@@ -408,17 +335,29 @@ public:
             return false;
         }
     }
-    auto Get(const char* _name)
+    auto get(const char* _name)
     {
+#ifdef NDEBUG
+        return db_list_.find(_name)->second;
+#else
         auto it = db_list_.find(_name);
-        if (it != db_list_.end())
-            throw std::runtime_error(fmt::format("[mysqlcpp] Database {} not found!", _name));
-        else
-            return it->second;
+        if (it == db_list_.end())
+            throw std::range_error(fmt::format("database {} not found.", _name));
+        return it->second;
+#endif
     }
-    auto operator[](const char* _name) { return Get(_name); }
+    auto operator[](const char* _name)
+    {
+#ifdef NDEBUG
+        return db_list_.find(_name)->second;
+#else
+        auto it = db_list_.find(_name);
+        assert(it != db_list_.end());
+        return it->second;
+#endif
+    }
 private:
-    std::unordered_map<std::string, std::shared_ptr<zonciu::mysql::MySql>> db_list_;
+    std::unordered_map<std::string, zonciu::mysql::MySql*> db_list_;
 };
 }
 }

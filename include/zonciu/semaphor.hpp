@@ -33,9 +33,6 @@ extern "C" {
 #endif
 namespace zonciu
 {
-namespace semaphore
-{
-
 #if defined(_WIN32)
 class Semaphore
 {
@@ -225,6 +222,5 @@ public:
 #else
 #error Unsupported platform! (No semaphore wrapper available)
 #endif
-} // namespace semaphore
 } // namespace zonciu
 #endif
