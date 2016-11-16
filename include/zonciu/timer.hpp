@@ -11,7 +11,7 @@
 #define ZONCIU_TIMER_HPP
 
 #include "zonciu/3rd/concurrentqueue/blockingconcurrentqueue.h"
-#include "zonciu/spinlock.hpp"
+#include "zonciu/lock.hpp"
 #include "zonciu/semaphor.hpp"
 #include <functional>
 #include <atomic>
