@@ -12,8 +12,6 @@
 #include <atomic>
 namespace zonciu
 {
-namespace singleton
-{
 template<class T>
 class Singleton
 {
@@ -69,6 +67,5 @@ private:
 // SINGLETON_INIT_BEFORE_MAIN(class,param_1,param_2,...);
 #define SINGLETON_INIT_BEFORE_MAIN(type,...) \
 template<> typename zonciu::singleton::Singleton<type>::Creator zonciu::singleton::Singleton<type>::creator_ = {__VA_ARGS__}
-} // namespace singleton
 } // namespace zonciu
 #endif
