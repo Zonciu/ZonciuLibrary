@@ -19,11 +19,16 @@ namespace zonciu
 {
 namespace util
 {
-inline void sleep(unsigned int ms)
+template<class T = std::chrono::milliseconds>
+inline void Sleep(T time)
+{
+    std::this_thread::sleep_for(time);
+}
+inline void Sleep(unsigned int ms)
 {
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
-inline void usleep(unsigned int us)
+inline void SleepUs(unsigned int us)
 {
     auto start = std::chrono::high_resolution_clock::now();
     auto end = start + std::chrono::microseconds(us);
@@ -35,7 +40,7 @@ inline void usleep(unsigned int us)
 
 //T = duration types
 template<typename T = std::chrono::seconds>
-inline auto timestamp()
+inline long long Timestamp()
 {
     return std::chrono::duration_cast<T>(
         std::chrono::system_clock::now().time_since_epoch()).count();
@@ -43,30 +48,30 @@ inline auto timestamp()
 
 //Convert to Uppercase hex string
 template<class T>
-inline std::string to_hex(const T* const _ptr, size_t _size)
+inline std::string ToHex(const T* data, size_t length)
 {
-    const unsigned char* _tp = reinterpret_cast<const unsigned char*>(_ptr);
+    const unsigned char* ptr = reinterpret_cast<const unsigned char*>(data);
     static const char base[] = {
         '0','1','2','3',
         '4','5','6','7',
         '8','9','A','B',
         'C','D','E','F' };
-    size_t _pos = 0;
-    std::string _hexbuf;
-    while (_pos < _size)
+    size_t pos = 0;
+    std::string hexbuf;
+    while (pos < length)
     {
-        if (_pos && !(_pos & 15))
-            _hexbuf.push_back('\n');
-        if (static_cast<unsigned char>(*_tp) < 0x10)
-            _hexbuf.push_back('0');
+        if (pos && !(pos % 16))
+            hexbuf.push_back('\n');
+        if (static_cast<unsigned char>(*ptr) < 0x10)
+            hexbuf.push_back('0');
         else
-            _hexbuf += base[((static_cast<int>(*_tp) >> 4) & 15)];
-        _hexbuf += base[(static_cast<int>(*_tp) & 15)];
-        _hexbuf += " ";
-        ++_pos;
-        ++_tp;
+            hexbuf += base[((static_cast<int>(*ptr) / 16) % 16)];
+        hexbuf += base[(static_cast<int>(*ptr) % 16)];
+        hexbuf += " ";
+        ++pos;
+        ++ptr;
     }
-    return _hexbuf;
+    return hexbuf;
 }
 } // namespace util
 } // namespace zonciu

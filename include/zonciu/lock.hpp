@@ -18,20 +18,20 @@ class SpinLock
 {
 public:
     SpinLock() = default;
-    void lock()
+    void Lock()
     {
-        if (!lock_.test_and_set(std::memory_order_acquire))
+        if (!_lock.test_and_set(std::memory_order_acquire))
         {
-            owner_ = std::this_thread::get_id();
+            _owner = std::this_thread::get_id();
             ++count_;
             return;
         }
         else
         {
-            if (owner_ != std::this_thread::get_id())
+            if (_owner != std::this_thread::get_id())
             {
                 int loop_try = 5;
-                while (lock_.test_and_set(std::memory_order_acquire))
+                while (_lock.test_and_set(std::memory_order_acquire))
                 {
                     if (!loop_try--)
                     {
@@ -39,7 +39,7 @@ public:
                         std::this_thread::yield();
                     }
                 }
-                owner_ = std::this_thread::get_id();
+                _owner = std::this_thread::get_id();
                 ++count_;
                 return;
             }
@@ -50,24 +50,24 @@ public:
             }
         }
     }
-    void unlock()
+    void Unlock()
     {
-        if (owner_ == std::this_thread::get_id())
+        if (_owner == std::this_thread::get_id())
         {
             --count_;
             if (count_ == 0)
             {
-                lock_.clear(std::memory_order_release);
-                owner_ = std::thread::id();
+                _lock.clear(std::memory_order_release);
+                _owner = std::thread::id();
             }
         }
     }
 private:
     SpinLock(const SpinLock&) = delete;
     const SpinLock& operator=(const SpinLock&) = delete;
-    std::atomic_flag lock_ = ATOMIC_FLAG_INIT;
+    std::atomic_flag _lock = ATOMIC_FLAG_INIT;
     int count_ = 0;
-    std::thread::id owner_;
+    std::thread::id _owner;
 };
 typedef std::lock_guard<SpinLock> SpinGuard;
 }

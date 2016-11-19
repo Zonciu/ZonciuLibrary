@@ -13,6 +13,7 @@
 #include "zonciu/3rd/concurrentqueue/blockingconcurrentqueue.h"
 #include "zonciu/lock.hpp"
 #include "zonciu/semaphor.hpp"
+#include <stdint.h>
 #include <functional>
 #include <atomic>
 #include <map>
@@ -43,13 +44,11 @@ private:
         once,
         forever
     };
-    class Job
+    struct Job
     {
-    public:
-        Job(TimerId _id, Flag _flag,
-            IntervalType _interval, TimerHandle _job)
+        Job(TimerId _id, Flag _flag, IntervalType _interval, TimerHandle _handle)
             :
-            id(_id), interval(_interval), handle(_job), flag(_flag)
+            id(_id), interval(_interval), handle(_handle), flag(_flag)
         {}
         struct Comp
         {
@@ -66,84 +65,84 @@ private:
     };
 public:
     MinHeapTimer() :
-        jobs_id_count_(0),
-        destruct_(false)
+        _jobs_id_count(0),
+        _destruct(false)
     {
-        observer_ = std::thread(&MinHeapTimer::_observe, this);
-        worker_ = std::thread(&MinHeapTimer::_work, this);
+        _observer = std::thread(&MinHeapTimer::_Observe, this);
+        _worker = std::thread(&MinHeapTimer::_Work, this);
     }
     ~MinHeapTimer()
     {
-        destruct_ = true;
-        observer_.join();
-        queue_.enqueue([]() {});
-        worker_.join();
-        remove_all();
+        _destruct = true;
+        _observer.join();
+        _queue.enqueue([]() {});
+        _worker.join();
+        Clear();
     }
     //Wait and run
     //Return timer_id
-    TimerId set_interval(std::uint32_t interval_milli, TimerHandle func)
+    TimerId SetInterval(std::uint32_t interval_milli, TimerHandle func)
     {
         using namespace std::chrono;
-        TimerId ret_id = jobs_id_count_++;
+        TimerId ret_id = _jobs_id_count++;
         auto* tmp = new Job(ret_id, Flag::forever, IntervalType(milliseconds(interval_milli)), func);
         tmp->next_time = time_point_cast<microseconds>(high_resolution_clock::now() + tmp->interval);
-        zonciu::SpinGuard idlck(id_lock_);
-        jobs_id_.insert(std::make_pair(ret_id, tmp));
-        zonciu::SpinGuard joblck(jobs_lock_);
-        jobs_.push(tmp);
-        waiter_.signal();
+        zonciu::SpinGuard idlck(_id_lock);
+        _jobs_id.insert(std::make_pair(ret_id, tmp));
+        zonciu::SpinGuard joblck(_jobs_lock);
+        _jobs.push(tmp);
+        _waiter.signal();
         return ret_id;
     }
     template<class _Rep, class _Period>
-    TimerId set_interval(std::chrono::duration<_Rep, _Period> interval, TimerHandle func)
+    TimerId SetInterval(std::chrono::duration<_Rep, _Period> interval, TimerHandle func)
     {
         using namespace std::chrono;
-        TimerId ret_id = jobs_id_count_++;
+        TimerId ret_id = _jobs_id_count++;
         auto* tmp = new Job(ret_id, Flag::forever, duration_cast<microseconds>(interval), func);
         tmp->next_time = time_point_cast<microseconds>(high_resolution_clock::now() + tmp->interval);
-        zonciu::SpinGuard idlck(id_lock_);
-        jobs_id_.insert(std::make_pair(ret_id, tmp));
-        zonciu::SpinGuard joblck(jobs_lock_);
-        jobs_.push(tmp);
-        waiter_.signal();
+        zonciu::SpinGuard idlck(_id_lock);
+        _jobs_id.insert(std::make_pair(ret_id, tmp));
+        zonciu::SpinGuard joblck(_jobs_lock);
+        _jobs.push(tmp);
+        _waiter.signal();
         return ret_id;
     }
     //Wait and run once
     //Return timer_id
-    TimerId set_timeout(std::uint32_t interval_milli, TimerHandle func)
+    TimerId SetTimeout(std::uint32_t interval_milli, TimerHandle func)
     {
         using namespace std::chrono;
-        TimerId ret_id = jobs_id_count_++;
+        TimerId ret_id = _jobs_id_count++;
         auto* tmp = new Job(ret_id, Flag::once, IntervalType(milliseconds(interval_milli)), func);
         tmp->next_time = tmp->next_time = time_point_cast<microseconds>(high_resolution_clock::now() + tmp->interval);
-        zonciu::SpinGuard idlck(id_lock_);
-        jobs_id_.insert(std::make_pair(ret_id, tmp));
-        zonciu::SpinGuard joblck(jobs_lock_);
-        jobs_.push(tmp);
-        waiter_.signal();
+        zonciu::SpinGuard idlck(_id_lock);
+        _jobs_id.insert(std::make_pair(ret_id, tmp));
+        zonciu::SpinGuard joblck(_jobs_lock);
+        _jobs.push(tmp);
+        _waiter.signal();
         return ret_id;
     }
     template<class _Rep, class _Period>
-    TimerId set_timeout(std::chrono::duration<_Rep, _Period> interval, TimerHandle func)
+    TimerId SetTimeout(std::chrono::duration<_Rep, _Period> interval, TimerHandle func)
     {
         using namespace std::chrono;
-        TimerId ret_id = jobs_id_count_++;
+        TimerId ret_id = _jobs_id_count++;
         auto* tmp = new Job(ret_id, Flag::once, duration_cast<microseconds>(interval), func);
         tmp->next_time = time_point_cast<microseconds>(high_resolution_clock::now() + tmp->interval);
-        zonciu::SpinGuard idlck(id_lock_);
-        jobs_id_.insert(std::make_pair(ret_id, tmp));
-        zonciu::SpinGuard joblck(jobs_lock_);
-        jobs_.push(tmp);
-        waiter_.signal();
+        zonciu::SpinGuard idlck(_id_lock);
+        _jobs_id.insert(std::make_pair(ret_id, tmp));
+        zonciu::SpinGuard joblck(_jobs_lock);
+        _jobs.push(tmp);
+        _waiter.signal();
         return ret_id;
     }
     //Return false if timer not found
-    bool remove_one(TimerId timer_id)
+    bool Remove(TimerId timer_id)
     {
-        zonciu::SpinGuard idlck(id_lock_);
-        auto it = jobs_id_.find(timer_id);
-        if (it != jobs_id_.end())
+        zonciu::SpinGuard idlck(_id_lock);
+        auto it = _jobs_id.find(timer_id);
+        if (it != _jobs_id.end())
         {
             it->second->flag = Flag::stop;
             return true;
@@ -151,92 +150,92 @@ public:
         else
             return false;
     }
-    void remove_all()
+    void Clear()
     {
-        zonciu::SpinGuard idlck(id_lock_);
-        zonciu::SpinGuard joblck(jobs_lock_);
+        zonciu::SpinGuard idlck(_id_lock);
+        zonciu::SpinGuard joblck(_jobs_lock);
         Job* tmp = nullptr;
-        while (!jobs_.empty())
+        while (!_jobs.empty())
         {
-            tmp = jobs_.top();
-            jobs_.pop();
+            tmp = _jobs.top();
+            _jobs.pop();
             delete tmp;
         }
-        jobs_id_.clear();
-        waiter_.signal();
+        _jobs_id.clear();
+        _waiter.signal();
     }
 private:
-    void _observe()
+    void _Observe()
     {
         using namespace std::chrono;
         Job* top = nullptr;
-        while (!destruct_)
+        while (!_destruct)
         {
-            jobs_lock_.lock();
-            if (!jobs_.empty())
+            _jobs_lock.lock();
+            if (!_jobs.empty())
             {
-                for (top = jobs_.top();top->next_time <= high_resolution_clock::now();top = jobs_.top())
+                for (top = _jobs.top();top->next_time <= high_resolution_clock::now();top = _jobs.top())
                 {
-                    jobs_.pop();
+                    _jobs.pop();
                     switch (top->flag)
                     {
                         case Flag::forever:
                         {
                             top->next_time += top->interval;
-                            queue_.enqueue(top->handle);
-                            jobs_.push(top);
+                            _queue.enqueue(top->handle);
+                            _jobs.push(top);
                             break;
                         }
                         case Flag::once:
                         {
-                            queue_.enqueue(top->handle);
-                            zonciu::SpinGuard idlck(id_lock_);
-                            jobs_id_.erase(top->id);
+                            _queue.enqueue(top->handle);
+                            zonciu::SpinGuard idlck(_id_lock);
+                            _jobs_id.erase(top->id);
                             delete top;
                             break;
                         }
                         default:
                         {
-                            zonciu::SpinGuard idlck(id_lock_);
-                            jobs_id_.erase(top->id);
+                            zonciu::SpinGuard idlck(_id_lock);
+                            _jobs_id.erase(top->id);
                             delete top;
                             break;
                         }
                     }
                 }
-                jobs_lock_.unlock();
-                if (jobs_.top()->next_time > high_resolution_clock::now())
+                _jobs_lock.unlock();
+                if (_jobs.top()->next_time > high_resolution_clock::now())
                 {
-                    auto wait_time = duration_cast<microseconds>(jobs_.top()->next_time - high_resolution_clock::now());
-                    waiter_.timed_wait((wait_time.count() > 0) ? wait_time.count() : 0);
+                    auto wait_time = duration_cast<microseconds>(_jobs.top()->next_time - high_resolution_clock::now());
+                    _waiter.timed_wait((wait_time.count() > 0) ? wait_time.count() : 0);
                 }
             }
             else
             {
-                jobs_lock_.unlock();
-                waiter_.wait();
+                _jobs_lock.unlock();
+                _waiter.wait();
             }
         }
     }
-    void _work()
+    void _Work()
     {
         TimerHandle handle;
-        while (!destruct_)
+        while (!_destruct)
         {
-            queue_.wait_dequeue(handle);
+            _queue.wait_dequeue(handle);
             handle();
         }
     }
-    zonciu::Semaphore waiter_;
-    zonciu::SpinLock id_lock_;
-    zonciu::SpinLock jobs_lock_;
-    std::atomic<TimerId> jobs_id_count_;
-    bool destruct_;
-    std::thread observer_;
-    std::thread worker_;
-    moodycamel::BlockingConcurrentQueue<TimerHandle> queue_;
-    std::map<unsigned int, Job*> jobs_id_;
-    std::priority_queue<Job*, std::vector<Job*>, Job::Comp> jobs_;
+    zonciu::Semaphore _waiter;
+    zonciu::SpinLock _id_lock;
+    zonciu::SpinLock _jobs_lock;
+    std::atomic<TimerId> _jobs_id_count;
+    bool _destruct;
+    std::thread _observer;
+    std::thread _worker;
+    moodycamel::BlockingConcurrentQueue<TimerHandle> _queue;
+    std::map<unsigned int, Job*> _jobs_id;
+    std::priority_queue<Job*, std::vector<Job*>, Job::Comp> _jobs;
 }; // class MinHeapTimer
 
 } // namespace timer

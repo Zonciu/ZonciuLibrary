@@ -19,11 +19,11 @@ private:
     struct Creator
     {
         template<class...Args>
-        Creator(Args&&...args) { init(std::forward<Args>(args)...); }
+        Creator(Args&&...args) { Init(std::forward<Args>(args)...); }
     };
     struct GC
     {
-        ~GC() { Singleton<T>::destroy(); }
+        ~GC() { Singleton<T>::Destroy(); }
     };
     struct Instance
     {
@@ -32,30 +32,30 @@ private:
     };
 public:
     template<class...Args>
-    static T& init(Args&&...args)
+    static T& Init(Args&&...args)
     {
-        static GC _gc;
-        if (!_get().flag.test_and_set())
-            _get().instance = new T(std::forward<Args>(args)...);
-        return *_get().instance;
+        static GC gc;
+        if (!_Get().flag.test_and_set())
+            _Get().instance = new T(std::forward<Args>(args)...);
+        return *_Get().instance;
     }
-    static T& get()
+    static T& Get()
     {
-        while (!_get().instance) {}
-        assert(_get().instance != nullptr);
-        return *_get().instance;
+        while (!_Get().instance) {}
+        assert(_Get().instance != nullptr);
+        return *_Get().instance;
     }
-    static void destroy()
+    static void Destroy()
     {
-        delete _get().instance;
-        _get().instance = nullptr;
-        _get().flag.clear();
+        delete _Get().instance;
+        _Get().instance = nullptr;
+        _Get().flag.clear();
     }
 private:
-    static Instance& _get()
+    static Instance& _Get()
     {
-        static Instance ins_;
-        return ins_;
+        static Instance ins;
+        return ins;
     }
     Singleton();
     ~Singleton();

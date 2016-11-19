@@ -1,18 +1,17 @@
-/*!
- *
- * author Zonciu
- * Contact: zonciu@zonciu.com
- * BSD license.
- * \brief
- * Jeff Preshing's semaphore implementation (under the terms of its separate
- * zlib license, embedded below).
- * Code from moodycamel::BlockingConcurrentQueue
- * \note
+/*
+* Updater: Zonciu Liang
+* Contract: zonciu@zonciu.com
+* Description:
+* - Code from moodycamel::BlockingConcurrentQueue
+* - Jeff Preshing's semaphore implementation (under the terms of its separate
+* - zlib license, embedded below).
+* Update: Unify code style;
+* BSD license.
 */
 #ifndef ZONCIU_SEMAPHORE_H
 #define ZONCIU_SEMAPHORE_H
 #include <assert.h>
-#include <stdint.h>
+
 #if defined(_WIN32)
 // Avoid including windows.h in a header; we only need a handful of
 // items, so we'll redeclare them here (this is relatively safe since
@@ -37,7 +36,7 @@ namespace zonciu
 class Semaphore
 {
 private:
-    void* m_hSema;
+    void* _sema;
 
     Semaphore(const Semaphore&) = delete;
     Semaphore& operator=(const Semaphore&) = delete;
@@ -47,35 +46,35 @@ public:
     {
         assert(initialCount >= 0);
         const long maxLong = 0x7fffffff;
-        m_hSema = CreateSemaphoreW(nullptr, initialCount, maxLong, nullptr);
+        _sema = CreateSemaphoreW(nullptr, initialCount, maxLong, nullptr);
     }
 
     ~Semaphore()
     {
-        CloseHandle(m_hSema);
+        CloseHandle(_sema);
     }
 
-    void wait()
+    void Wait()
     {
         const unsigned long infinite = 0xffffffff;
-        WaitForSingleObject(m_hSema, infinite);
+        WaitForSingleObject(_sema, infinite);
     }
 
-    bool try_wait()
+    bool TryWait()
     {
         const unsigned long RC_WAIT_TIMEOUT = 0x00000102;
-        return WaitForSingleObject(m_hSema, 0) != RC_WAIT_TIMEOUT;
+        return WaitForSingleObject(_sema, 0) != RC_WAIT_TIMEOUT;
     }
-
-    bool timed_wait(unsigned long long usecs)
+    //microsecond
+    bool WaitFor(unsigned long long us)
     {
         const unsigned long RC_WAIT_TIMEOUT = 0x00000102;
-        return WaitForSingleObject(m_hSema, (unsigned long)(usecs / 1000)) != RC_WAIT_TIMEOUT;
+        return WaitForSingleObject(_sema, (unsigned long)(us / 1000)) != RC_WAIT_TIMEOUT;
     }
 
-    void signal(int count = 1)
+    void Signal(int count = 1)
     {
-        ReleaseSemaphore(m_hSema, count, nullptr);
+        ReleaseSemaphore(_sema, count, nullptr);
     }
 };
 #elif defined(__MACH__)
@@ -86,7 +85,7 @@ public:
 class Semaphore
 {
 private:
-    semaphore_t m_sema;
+    semaphore_t _sema;
 
     Semaphore(const Semaphore& other) = delete;
     Semaphore& operator=(const Semaphore& other) = delete;
@@ -95,46 +94,46 @@ public:
     Semaphore(int initialCount = 0)
     {
         assert(initialCount >= 0);
-        semaphore_create(mach_task_self(), &m_sema, SYNC_POLICY_FIFO, initialCount);
+        semaphore_create(mach_task_self(), &_sema, SYNC_POLICY_FIFO, initialCount);
     }
 
     ~Semaphore()
     {
-        semaphore_destroy(mach_task_self(), m_sema);
+        semaphore_destroy(mach_task_self(), _sema);
     }
 
-    void wait()
+    void Wait()
     {
-        semaphore_wait(m_sema);
+        semaphore_wait(_sema);
     }
 
-    bool try_wait()
+    bool TryWait()
     {
         return timed_wait(0);
     }
-
-    bool timed_wait(unsigned long long timeout_usecs)
+    //microsecond
+    bool WaitFor(unsigned long long us)
     {
         mach_timespec_t ts;
-        ts.tv_sec = timeout_usecs / 1000000;
-        ts.tv_nsec = (timeout_usecs % 1000000) * 1000;
+        ts.tv_sec = us / 1000000;
+        ts.tv_nsec = (us % 1000000) * 1000;
 
         // added in OSX 10.10: https://developer.apple.com/library/prerelease/mac/documentation/General/Reference/APIDiffsMacOSX10_10SeedDiff/modules/Darwin.html
-        kern_return_t rc = semaphore_timedwait(m_sema, ts);
+        kern_return_t rc = semaphore_timedwait(_sema, ts);
 
         return rc != KERN_OPERATION_TIMED_OUT;
     }
 
-    void signal()
+    void Signal()
     {
-        semaphore_signal(m_sema);
+        semaphore_signal(_sema);
     }
 
-    void signal(int count)
+    void Signal(int count)
     {
         while (count-- > 0)
         {
-            semaphore_signal(m_sema);
+            semaphore_signal(_sema);
         }
     }
 };
@@ -145,7 +144,7 @@ public:
 class Semaphore
 {
 private:
-    sem_t m_sema;
+    sem_t _sema;
 
     Semaphore(const Semaphore& other) = delete;
     Semaphore& operator=(const Semaphore& other) = delete;
@@ -154,42 +153,42 @@ public:
     Semaphore(int initialCount = 0)
     {
         assert(initialCount >= 0);
-        sem_init(&m_sema, 0, initialCount);
+        sem_init(&_sema, 0, initialCount);
     }
 
     ~Semaphore()
     {
-        sem_destroy(&m_sema);
+        sem_destroy(&_sema);
     }
 
-    void wait()
+    void Wait()
     {
         // http://stackoverflow.com/questions/2013181/gdb-causes-sem-wait-to-fail-with-eintr-error
         int rc;
         do
         {
-            rc = sem_wait(&m_sema);
+            rc = sem_wait(&_sema);
         } while (rc == -1 && errno == EINTR);
     }
 
-    bool try_wait()
+    bool TryWait()
     {
         int rc;
         do
         {
-            rc = sem_trywait(&m_sema);
+            rc = sem_trywait(&_sema);
         } while (rc == -1 && errno == EINTR);
         return !(rc == -1 && errno == EAGAIN);
     }
 
-    bool timed_wait(unsigned long long usecs)
+    bool WaitFor(unsigned long long us)
     {
         struct timespec ts;
         const int usecs_in_1_sec = 1000000;
         const int nsecs_in_1_sec = 1000000000;
         clock_gettime(CLOCK_REALTIME, &ts);
-        ts.tv_sec += usecs / usecs_in_1_sec;
-        ts.tv_nsec += (usecs % usecs_in_1_sec) * 1000;
+        ts.tv_sec += us / usecs_in_1_sec;
+        ts.tv_nsec += (us % usecs_in_1_sec) * 1000;
         // sem_timedwait bombs if you have more than 1e9 in tv_nsec
         // so we have to clean things up before passing it in
         if (ts.tv_nsec > nsecs_in_1_sec)
@@ -201,21 +200,21 @@ public:
         int rc;
         do
         {
-            rc = sem_timedwait(&m_sema, &ts);
+            rc = sem_timedwait(&_sema, &ts);
         } while (rc == -1 && errno == EINTR);
         return !(rc == -1 && errno == ETIMEDOUT);
     }
 
-    void signal()
+    void Signal()
     {
-        sem_post(&m_sema);
+        sem_post(&_sema);
     }
 
-    void signal(int count)
+    void Signal(int count)
     {
         while (count-- > 0)
         {
-            sem_post(&m_sema);
+            sem_post(&_sema);
         }
     }
 };

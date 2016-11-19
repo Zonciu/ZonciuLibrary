@@ -6,15 +6,15 @@
 * Author:  Zonciu Liang
 * Contract: zonciu@zonciu.com
 * Description: static class Random
-* Api: make(T min,T max)
-*      make(T max)
-*      make_bool(double p_true)
+* Api: Num(T min,T max)
+*      Num(T max)
+*      Bool(double p_true)
 */
 #ifndef ZONCIU_RANDOM_HPP
 #define ZONCIU_RANDOM_HPP
 #include <random>
 #include <chrono>
-#include <zonciu/typedef.hpp>
+#include "zonciu/typedef.hpp"
 namespace zonciu
 {
 //\use std::default_random_engine
@@ -24,30 +24,30 @@ class Random
 {
 public:
     // 0 <= p_true <= 1, [p_true] chance return true, [1-p_true] chance return false
-    static bool make_bool(const double p_true)
+    static bool Bool(double p_true)
     {
-        return std::bernoulli_distribution(p_true)(_get_engine());
+        return std::bernoulli_distribution(p_true)(_GetEngine());
     }
 
     // min <= result <= max
-    template<class T = i32>
-    static T make(const T min, const T max)
+    template<class T = int>
+    static T Num(T min, T max)
     {
-        return std::uniform_int_distribution<T>(min, max)(_get_engine());
+        return std::uniform_int_distribution<T>(min, max)(_GetEngine());
     }
 
     // 0 <= result <= max
-    template<class T = i32>
-    static T make(const T max)
+    template<class T = int>
+    static T Num(T max)
     {
-        return std::uniform_int_distribution<T>(0, max)(_get_engine());
+        return std::uniform_int_distribution<T>(0, max)(_GetEngine());
     }
 private:
-    static std::default_random_engine& _get_engine()
+    static std::default_random_engine& _GetEngine()
     {
-        static std::default_random_engine rng_(static_cast<int>(
+        static std::default_random_engine rng(static_cast<int>(
             std::chrono::system_clock::now().time_since_epoch().count()));
-        return rng_;
+        return rng;
     }
 };
 }
