@@ -1,0 +1,19 @@
+language: cpp
+sudo: required
+dist: trusty
+
+compiler:
+  - clang
+  - gcc
+  - cmake
+
+os:
+  - linux
+
+before_install:
+  - sudo apt-get update
+  - sudo apt-get install -y cmake valgrind
+env:
+  global:
+    - BUILD_TYPE: RELEASE
+script: sh test.sh

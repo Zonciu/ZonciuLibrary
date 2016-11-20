@@ -2,7 +2,11 @@ MESSAGE(STATUS "CMake version: ${CMAKE_VERSION}")
 
 CMAKE_MINIMUM_REQUIRED(VERSION 3.6.1)
 
-#Check platform, support Windows and Linux only
+PROJECT(zonciu)
+
+SET(CMAKE_BUILD_TYPE RELEASE)
+
+#Check platform, support Windows and Linux
 IF(UNIX)
     MESSAGE(STATUS "Linux Platform")
     SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g -ggdb")
@@ -17,12 +21,7 @@ ELSE()
     MESSAGE(FATAL_ERROR "Unsupported Platform ${CMAKE_SYSTEM_NAME}")
 ENDIF()
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
-IF(UNIX)
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lpthread")
-ENDIF()
 #Set compile mode
-SET(CMAKE_BUILD_TYPE RELEASE)
-PROJECT(zonciu)
+
 ADD_SUBDIRECTORY(test)
 

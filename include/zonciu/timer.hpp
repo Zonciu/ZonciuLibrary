@@ -91,7 +91,7 @@ public:
         _jobs_id.insert(std::make_pair(ret_id, tmp));
         zonciu::SpinGuard joblck(_jobs_lock);
         _jobs.push(tmp);
-        _waiter.signal();
+        _waiter.Signal();
         return ret_id;
     }
     template<class _Rep, class _Period>
@@ -105,7 +105,7 @@ public:
         _jobs_id.insert(std::make_pair(ret_id, tmp));
         zonciu::SpinGuard joblck(_jobs_lock);
         _jobs.push(tmp);
-        _waiter.signal();
+        _waiter.Signal();
         return ret_id;
     }
     //Wait and run once
@@ -120,7 +120,7 @@ public:
         _jobs_id.insert(std::make_pair(ret_id, tmp));
         zonciu::SpinGuard joblck(_jobs_lock);
         _jobs.push(tmp);
-        _waiter.signal();
+        _waiter.Signal();
         return ret_id;
     }
     template<class _Rep, class _Period>
@@ -134,7 +134,7 @@ public:
         _jobs_id.insert(std::make_pair(ret_id, tmp));
         zonciu::SpinGuard joblck(_jobs_lock);
         _jobs.push(tmp);
-        _waiter.signal();
+        _waiter.Signal();
         return ret_id;
     }
     //Return false if timer not found
@@ -162,7 +162,7 @@ public:
             delete tmp;
         }
         _jobs_id.clear();
-        _waiter.signal();
+        _waiter.Signal();
     }
 private:
     void _Observe()
@@ -171,7 +171,7 @@ private:
         Job* top = nullptr;
         while (!_destruct)
         {
-            _jobs_lock.lock();
+            _jobs_lock.Lock();
             if (!_jobs.empty())
             {
                 for (top = _jobs.top();top->next_time <= high_resolution_clock::now();top = _jobs.top())
@@ -203,17 +203,17 @@ private:
                         }
                     }
                 }
-                _jobs_lock.unlock();
+                _jobs_lock.Unlock();
                 if (_jobs.top()->next_time > high_resolution_clock::now())
                 {
                     auto wait_time = duration_cast<microseconds>(_jobs.top()->next_time - high_resolution_clock::now());
-                    _waiter.timed_wait((wait_time.count() > 0) ? wait_time.count() : 0);
+                    _waiter.WaitFor((wait_time.count() > 0) ? wait_time.count() : 0);
                 }
             }
             else
             {
-                _jobs_lock.unlock();
-                _waiter.wait();
+                _jobs_lock.Unlock();
+                _waiter.Wait();
             }
         }
     }

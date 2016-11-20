@@ -14,7 +14,6 @@
 #define ZONCIU_RANDOM_HPP
 #include <random>
 #include <chrono>
-#include "zonciu/typedef.hpp"
 namespace zonciu
 {
 //\use std::default_random_engine
