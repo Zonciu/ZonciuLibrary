@@ -12,16 +12,9 @@ os:
 addons:
   apt:
     sources:
-    - ubuntu-toolchain-r-test
-    - llvm-toolchain-precise-3.6
     - kalakris-cmake
     packages:
-    - gcc-5.4
-    - g++-5.4
-    - clang-3.6
     - cmake
-after_failure:
- - cat /home/travis/build/Zonciu/ZonciuLibrary/build/CMakeFiles/CMakeError.log
 env:
   global:
     - BUILD_TYPE: RELEASE
