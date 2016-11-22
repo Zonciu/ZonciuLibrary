@@ -23,8 +23,13 @@ namespace zonciu
 {
 class Json
 {
+private:
+    rapidjson::Document _value;
 public:
-    rapidjson::Document value;
+    template<class T>
+    auto& operator[](T index) { return _value[index]; }
+    template<class T>
+    const auto& operator[](T index) const { return _value[index]; }
 
     bool ParseFromFile(const char* _filename)
     {
@@ -32,14 +37,19 @@ public:
         if (!_ifs.is_open())
             return false;
         rapidjson::IStreamWrapper _warp(_ifs);
-        value.ParseStream(_warp);
+        _value.ParseStream(_warp);
         _ifs.close();
-        return !value.HasParseError();
+        return !_value.HasParseError();
     }
-    bool ParseFromString(const char* _json)
+    bool ParseFromString(const char* str)
     {
-        value.Parse(_json);
-        return !value.HasParseError();
+        _value.Parse(str);
+        return !_value.HasParseError();
+    }
+    bool ParseFromString(const char* str, size_t length)
+    {
+        _value.Parse(str, length);
+        return !_value.HasParseError();
     }
     bool WriteFile(const char* _filename)
     {
@@ -48,7 +58,7 @@ public:
             return false;
         rapidjson::OStreamWrapper _warp(_ofs);
         rapidjson::Writer<rapidjson::OStreamWrapper> _writer(_warp);
-        value.Accept(_writer);
+        _value.Accept(_writer);
         _ofs.close();
         return true;
     }
@@ -56,19 +66,19 @@ public:
     {
         rapidjson::StringBuffer _buffer;
         rapidjson::Writer<rapidjson::StringBuffer> _writer(_buffer);
-        value.Accept(_writer);
+        _value.Accept(_writer);
         return std::string(_buffer.GetString());
     }
-    const char* GetParseErrorString()
+    const char* GetParseError()
     {
         typedef std::map<rapidjson::ParseErrorCode, const char*> ErrorGroup;
-        static ErrorGroup error_group_{
+        const static ErrorGroup error_group_{
             ErrorGroup::value_type(rapidjson::kParseErrorNone                         ,"No error"),                                            //!< No error.
 
             ErrorGroup::value_type(rapidjson::kParseErrorDocumentEmpty                ,"The document is empty"),                               //!< The document is empty.
             ErrorGroup::value_type(rapidjson::kParseErrorDocumentRootNotSingular      ,"The document root must not follow by other values"),   //!< The document root must not follow by other values.
 
-            ErrorGroup::value_type(rapidjson::kParseErrorValueInvalid                 ,"Invalid value") ,                                       //!< Invalid value.
+            ErrorGroup::value_type(rapidjson::kParseErrorValueInvalid                 ,"Invalid _value") ,                                       //!< Invalid _value.
 
             ErrorGroup::value_type(rapidjson::kParseErrorObjectMissName               ,"Missing a name for object member") ,                    //!< Missing a name for object member.
             ErrorGroup::value_type(rapidjson::kParseErrorObjectMissColon              ,"Missing a colon after a name of object member") ,       //!< Missing a colon after a name of object member.
@@ -89,8 +99,9 @@ public:
             ErrorGroup::value_type(rapidjson::kParseErrorTermination                  ,"Parsing was terminated") ,                              //!< Parsing was terminated.
             ErrorGroup::value_type(rapidjson::kParseErrorUnspecificSyntaxError        ,"Unspecific syntax error")                               //!< Unspecific syntax error.
         };
-        return error_group_[value.GetParseError()];
+        return error_group_.at(_value.GetParseError());
     }
+    int GetParseErrorCode() { return _value.GetParseError(); }
 };
 }
 #endif
