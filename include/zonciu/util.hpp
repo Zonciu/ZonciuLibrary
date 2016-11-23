@@ -47,10 +47,8 @@ inline long long Timestamp()
 }
 
 //Convert to Uppercase hex string
-template<class T>
-inline std::string ToHex(const T* data, size_t length)
+inline std::string ToHex(const unsigned char* ptr, size_t length)
 {
-    const unsigned char* ptr = reinterpret_cast<const unsigned char*>(data);
     static const char base[] = {
         '0','1','2','3',
         '4','5','6','7',
@@ -72,6 +70,14 @@ inline std::string ToHex(const T* data, size_t length)
         ++ptr;
     }
     return hexbuf;
+}
+inline std::string ToHex(const char* ptr, size_t length)
+{
+    return ToHex(reinterpret_cast<const unsigned char*>(ptr), length);
+}
+inline std::string ToHex(std::string& str)
+{
+    return ToHex(str.c_str(), str.length());
 }
 } // namespace util
 } // namespace zonciu

@@ -7,13 +7,25 @@
 #include "zonciu/singleton.hpp"
 #include "zonciu/semaphor.hpp"
 #include "zonciu/format.hpp"
+#include "zonciu/json.hpp"
 #include <iostream>
 #include <stdio.h>
+#include <gtest/gtest.h>
 using namespace std;
 
-int main()
+TEST(Random_Num, random_num_test)
 {
-    
-    printf("Done\n");
+    EXPECT_LE(10, zonciu::Random::Num(10, 9999));
+    EXPECT_GE(9999, zonciu::Random::Num(10, 9999));
 }
-
+int test(int argc,char*argv[])
+{
+    testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
+int main(int argc, char *argv[])
+{
+    zonciu::Json js;
+    cout<<as.dump();
+    
+}
