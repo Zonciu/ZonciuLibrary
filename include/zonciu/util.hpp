@@ -19,14 +19,14 @@ namespace zonciu
 {
 namespace util
 {
-template<class T = std::chrono::milliseconds>
-inline void Sleep(T time)
-{
-    std::this_thread::sleep_for(time);
-}
 inline void Sleep(unsigned int ms)
 {
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+}
+template<class _Rep = long long, class _Period = std::milli>
+inline void Sleep(std::chrono::duration<_Rep, _Period>& time)
+{
+    std::this_thread::sleep_for(time);
 }
 inline void SleepUs(unsigned int us)
 {
