@@ -5,76 +5,75 @@
 *
 * Author:  Zonciu Liang
 * Contract: zonciu@zonciu.com
+* Description: lock library
 */
-#ifndef ZONCIU_SPIN_LOCK_HPP
-#define ZONCIU_SPIN_LOCK_HPP
+#ifndef ZONCIU_LOCK_HPP
+#define ZONCIU_LOCK_HPP
 #include <atomic>
-#include <mutex>
 #include <thread>
+#include <mutex>
 namespace zonciu
 {
-//Use atomic_flag, yield after 5 spins.
-//! ! ! Beware: DO NOT use Lock() and Unlock() if you are going to use std::lock_guard or other auto lock & unlock method.
-//----  this class implements private lock() and unlock() and become friend with std::lock_guard.
 class SpinLock
 {
 public:
     SpinLock() = default;
-    void Lock()
+    void lock()
     {
-        if (!_lock.test_and_set(std::memory_order_acquire))
-        {
-            _owner = std::this_thread::get_id();
+        int loop_try = 5;
+        while (lock_.test_and_set()) {
+            if (!loop_try--) {
+                loop_try = 5;
+                std::this_thread::yield();
+            }
+        }
+    }
+    void unlock() { lock_.clear(); }
+private:
+    SpinLock(const SpinLock&) = delete;
+    const SpinLock& operator=(const SpinLock&) = delete;
+    std::atomic_flag lock_ = ATOMIC_FLAG_INIT;
+};
+class RecursiveSpinLock
+{
+public:
+    RecursiveSpinLock() = default;
+    void lock()
+    {
+        if (!lock_.test_and_set(std::memory_order_acquire)) {
+            owner_ = std::this_thread::get_id();
             ++count_;
             return;
         }
-        else
-        {
-            if (_owner != std::this_thread::get_id())
-            {
-                int loop_try = 5;
-                while (_lock.test_and_set(std::memory_order_acquire))
-                {
-                    if (!loop_try--)
-                    {
-                        loop_try = 5;
-                        std::this_thread::yield();
-                    }
+        else if (owner_ != std::this_thread::get_id()) {
+            int loop_try = 5;
+            while (lock_.test_and_set(std::memory_order_acquire)) {
+                if (!loop_try--) {
+                    loop_try = 5;
+                    std::this_thread::yield();
                 }
-                _owner = std::this_thread::get_id();
-                ++count_;
-                return;
             }
-            else
-            {
-                ++count_;
-                return;
-            }
+            owner_ = std::this_thread::get_id();
         }
+        ++count_;
+        return;
     }
-    void Unlock()
+    void unlock()
     {
-        if (_owner == std::this_thread::get_id())
-        {
-            --count_;
-            if (count_ == 0)
-            {
-                _lock.clear(std::memory_order_release);
-                _owner = std::thread::id();
-            }
+        if (owner_ == std::this_thread::get_id()) {
+            if (!--count_)// clear while count_ == 0
+                lock_.clear(std::memory_order_release);
         }
     }
 private:
-    friend std::lock_guard<SpinLock>;
-    //implement for std::lock_guard
-    void lock() { Lock(); }
-    void unlock() { Unlock(); }
-    SpinLock(const SpinLock&) = delete;
-    const SpinLock& operator=(const SpinLock&) = delete;
-    std::atomic_flag _lock = ATOMIC_FLAG_INIT;
+    RecursiveSpinLock(const RecursiveSpinLock&) = delete;
+    const RecursiveSpinLock& operator=(const RecursiveSpinLock&) = delete;
+    std::atomic_flag lock_ = ATOMIC_FLAG_INIT;
     int count_ = 0;
-    std::thread::id _owner;
+    std::thread::id owner_;
 };
+
 typedef std::lock_guard<SpinLock> SpinGuard;
+typedef std::lock_guard<RecursiveSpinLock> RecSpinGuard;
 }
 #endif

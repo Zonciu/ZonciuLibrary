@@ -7,8 +7,8 @@
  * Random
  * \note
 */
-#ifndef ZONCIU_SINGKETON_HPP
-#define ZONCIU_SINGKETON_HPP
+#ifndef ZONCIU_SINGLETON_HPP
+#define ZONCIU_SINGLETON_HPP
 #include <atomic>
 namespace zonciu
 {
@@ -64,8 +64,9 @@ private:
     Singleton(Singleton&&) = delete;
     static Creator creator_;
 };
-// SINGLETON_INIT_BEFORE_MAIN(class,param_1,param_2,...);
-#define SINGLETON_INIT_BEFORE_MAIN(type,...) \
+// SINGLETON_INIT(class,param_1,param_2,...);
+// init before main()
+#define SINGLETON_INIT(type,...) \
 template<> typename zonciu::singleton::Singleton<type>::Creator zonciu::singleton::Singleton<type>::creator_ = {__VA_ARGS__}
 } // namespace zonciu
-#endif
+#endif // ZONCIU_SINGLETON_HPP

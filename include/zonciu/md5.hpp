@@ -1,11 +1,9 @@
-#ifndef ZONCIU_SECURITY_MD5_HPP
-#define ZONCIU_SECURITY_MD5_HPP
+#ifndef ZONCIU_MD5_HPP
+#define ZONCIU_MD5_HPP
 #include <string>
 #include <stdint.h>
 #include <array>
 namespace zonciu
-{
-namespace security
 {
 class Md5
 {
@@ -123,6 +121,5 @@ private:
     }
 };
 }
-}
 
-#endif // ZONCIU_SECURITY_MD5_HPP
+#endif // ZONCIU_MD5_HPP

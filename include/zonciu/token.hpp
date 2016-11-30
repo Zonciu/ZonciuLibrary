@@ -7,16 +7,14 @@
 * Contract: zonciu@zonciu.com
 * Description: token
 */
-#ifndef ZONCIU_SECURITY_TOKEN_HPP
-#define ZONCIU_SECURITY_TOKEN_HPP
+#ifndef ZONCIU_TOKEN_HPP
+#define ZONCIU_TOKEN_HPP
 
 #include "zonciu/random.hpp"
 #include <string>
 #include <stdint.h>
 #include <vector>
 namespace zonciu
-{
-namespace security
 {
 //Token length must be less than 65535, use default dictionary [a-zA-Z0-9]
 class Token
@@ -56,5 +54,4 @@ class Token
     }
 };
 }
-}
-#endif
+#endif // ZONCIU_TOKEN_HPP
