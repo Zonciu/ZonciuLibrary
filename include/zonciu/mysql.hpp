@@ -52,11 +52,11 @@ public:
         }
         return (*this);
     }
-    Connection(const Connection&) = delete;
-    Connection& operator=(const Connection&) = delete;
     ~Connection() { mysql_close(_conn); _conn = nullptr; }
     MYSQL* operator*() { return _conn; }
 private:
+    Connection(const Connection&) = delete;
+    Connection& operator=(const Connection&) = delete;
     MYSQL* _conn;
 };
 

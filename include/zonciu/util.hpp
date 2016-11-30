@@ -24,7 +24,7 @@ inline void Sleep(unsigned int ms)
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
 template<class _Rep = long long, class _Period = std::milli>
-inline void Sleep(std::chrono::duration<_Rep, _Period>& time)
+inline void Sleep(const std::chrono::duration<_Rep, _Period>& time)
 {
     std::this_thread::sleep_for(time);
 }
