@@ -4,27 +4,38 @@
 #include "zonciu/lock.hpp"
 #include "zonciu/random.hpp"
 #include "zonciu/singleton.hpp"
+#include "zonciu/thread.hpp"
 #include "zonciu/semaphor.hpp"
 #include "zonciu/format.hpp"
 #include "zonciu/json.hpp"
 #include <iostream>
 #include <stdio.h>
-#include <gtest/gtest.h>
+//#include <gtest/gtest.h>
 #include <windows.h>
 using namespace std;
+/*
 
 TEST(Random_Num, random_num_test)
 {
-    EXPECT_LE(10, zonciu::Random::Num(10, 9999));
-    EXPECT_GE(9999, zonciu::Random::Num(10, 9999));
+	EXPECT_LE(10, zonciu::Random::Num(10, 9999));
+	EXPECT_GE(9999, zonciu::Random::Num(10, 9999));
 }
 int test(int argc, char*argv[])
 {
-    testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}
+	testing::InitGoogleTest(&argc, argv);
+	return RUN_ALL_TESTS();
+}*/
 
 int main(int argc, char *argv[])
 {
-    zonciu::MinHeapTimer t;
+	zonciu::ThreadGroup tg;
+	for (int i = 0; i < 8; i++)
+	{
+		tg.Create([]
+		{
+			std::cout << this_thread::get_id() << std::endl;
+		});
+	}
+	tg.JoinAll();
+	system("pause");
 }

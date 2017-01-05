@@ -24,8 +24,7 @@ public:
     //\std::micro -> microsecond
     //\std::nano  -> nanosecond
     template<typename T = std::ratio<1, 1>>
-    double Get()
-    {
+    double Get() {
         return std::chrono::duration<double, T>(time_).count();
     }
 private:

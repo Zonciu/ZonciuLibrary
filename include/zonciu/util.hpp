@@ -19,36 +19,30 @@ namespace zonciu
 {
 namespace util
 {
-inline void Sleep(unsigned int ms)
-{
+inline void Sleep(unsigned int ms) {
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
 template<class _Rep = long long, class _Period = std::milli>
-inline void Sleep(const std::chrono::duration<_Rep, _Period>& time)
-{
+inline void Sleep(const std::chrono::duration<_Rep, _Period>& time) {
     std::this_thread::sleep_for(time);
 }
-inline void SleepUs(unsigned int us)
-{
+inline void SleepUs(unsigned int us) {
     auto start = std::chrono::high_resolution_clock::now();
     auto end = start + std::chrono::microseconds(us);
-    do
-    {
+    do {
         std::this_thread::yield();
     } while (std::chrono::high_resolution_clock::now() < end);
 }
 
 //T = duration types
 template<typename T = std::chrono::seconds>
-inline long long Timestamp()
-{
+inline long long Timestamp() {
     return std::chrono::duration_cast<T>(
         std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
 //Convert to Uppercase hex string
-inline std::string ToHex(const unsigned char* ptr, size_t length)
-{
+inline std::string ToHex(const unsigned char* ptr, size_t length) {
     static const char base[] = {
         '0','1','2','3',
         '4','5','6','7',
@@ -56,8 +50,7 @@ inline std::string ToHex(const unsigned char* ptr, size_t length)
         'C','D','E','F' };
     size_t pos = 0;
     std::string hexbuf;
-    while (pos < length)
-    {
+    while (pos < length) {
         if (pos && !(pos % 16))
             hexbuf.push_back('\n');
         if (static_cast<unsigned char>(*ptr) < 0x10)
@@ -71,12 +64,10 @@ inline std::string ToHex(const unsigned char* ptr, size_t length)
     }
     return hexbuf;
 }
-inline std::string ToHex(const char* ptr, size_t length)
-{
+inline std::string ToHex(const char* ptr, size_t length) {
     return ToHex(reinterpret_cast<const unsigned char*>(ptr), length);
 }
-inline std::string ToHex(std::string& str)
-{
+inline std::string ToHex(std::string& str) {
     return ToHex(str.c_str(), str.length());
 }
 } // namespace util
