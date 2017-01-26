@@ -70,6 +70,6 @@ namespace zonciu
     };
 
     typedef std::lock_guard<SpinLock> SpinGuard;
-    typedef std::lock_guard<RecursiveSpinLock> RecSpinGuard;
+    typedef std::lock_guard<RecursiveSpinLock> RecursiveSpinGuard;
 }
 #endif

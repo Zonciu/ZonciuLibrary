@@ -20,7 +20,7 @@ public:
 	template<typename _Func>
 	std::thread* Create(_Func func_)
 	{
-		zonciu::SpinGuard sg(_lock);
+		zonciu::RecursiveSpinGuard sg(_lock);
 		std::thread* thread = new std::thread(func_);
 		_group.push_back(thread);
 		return thread;
@@ -31,7 +31,7 @@ public:
 		if (thread_)
 		{
 			ZONCIU_ASSERT(!IsContainThread(thread_), "This thread is in this group");
-			zonciu::SpinGuard sg(_lock);
+			zonciu::RecursiveSpinGuard sg(_lock);
 			_group.push_back(thread_);
 		}
 	}
@@ -40,11 +40,12 @@ public:
 		if (thread_)
 		{
 			std::thread::id id = thread_->get_id();
-			zonciu::SpinGuard sg(_lock);
+			zonciu::RecursiveSpinGuard sg(_lock);
 			for (auto it = _group.begin(); it != _group.end(); ++it)
 			{
 				if ((*it)->get_id() == id)
 				{
+					delete *it;
 					_group.erase(it);
 					return;
 				}
@@ -56,7 +57,7 @@ public:
 		if (thread_)
 		{
 			std::thread::id id = thread_->get_id();
-			zonciu::SpinGuard sg(_lock);
+			zonciu::RecursiveSpinGuard sg(_lock);
 			for (auto&it : _group)
 			{
 				if (it->get_id() == id)
@@ -69,7 +70,7 @@ public:
 	bool IsContainThisThread()
 	{
 		std::thread::id id = std::this_thread::get_id();
-		zonciu::SpinGuard sg(_lock);
+		zonciu::RecursiveSpinGuard sg(_lock);
 		for (auto&it : _group)
 		{
 			if (it->get_id() == id)
@@ -80,10 +81,12 @@ public:
 
 	void JoinAll()
 	{
-		zonciu::SpinGuard sg(_lock);
-		for (auto&it : _group)
+		zonciu::RecursiveSpinGuard sg(_lock);
+		for (auto it = _group.begin(); it != _group.end();)
 		{
-			it->join();
+			(*it)->join();
+			delete *it;
+			it = _group.erase(it);
 		}
 	}
 
@@ -92,12 +95,14 @@ public:
 		if (thread_)
 		{
 			std::thread::id id = thread_->get_id();
-			zonciu::SpinGuard sg(_lock);
-			for (auto&it : _group)
+			zonciu::RecursiveSpinGuard sg(_lock);
+			for (auto it = _group.begin(); it != _group.end();)
 			{
-				if (it->get_id() == id)
+				if ((*it)->get_id() == id)
 				{
-					it->join();
+					(*it)->join();
+					delete *it;
+					it = _group.erase(it);
 					return true;
 				}
 			}
@@ -107,14 +112,14 @@ public:
 
 	size_t Size()
 	{
-		zonciu::SpinGuard sg(_lock);
+		zonciu::RecursiveSpinGuard sg(_lock);
 		return _group.size();
 	}
 private:
 	ThreadGroup(const ThreadGroup&) = delete;
 	const ThreadGroup& operator=(const ThreadGroup&) = delete;
 	std::list<std::thread*> _group;
-	mutable zonciu::SpinLock _lock;
+	mutable zonciu::RecursiveSpinLock _lock;
 };
 }
 #endif
