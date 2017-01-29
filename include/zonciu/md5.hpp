@@ -10,36 +10,35 @@ class Md5
 public:
 	Md5(const unsigned char* data, size_t length)
 	{
-		Make((const unsigned char*)data, length);
+		Make(data, length);
 	}
 	Md5(const std::string& data)
 	{
-		Make((const unsigned char*)data.c_str(), data.length());
+		Make(reinterpret_cast<const unsigned char*>(data.c_str()), data.length());
 	}
 
-	std::array<uint32_t, 4> raw() { return raw_; }
+	std::array<uint32_t, 4> raw() { return _raw; }
+
 	std::string GetString()
 	{
-		static const unsigned char dict[] = {
-			'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'
-		};
-		int hexNum;
-		char res[33]{ 0 };
+		static const unsigned char dict[] = { '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f' };
+		int hex_num;
+		char ret_str[33]{ 0 };
 		int c = 0;
 		for (int i = 0; i < 4; i++)
 		{
 			for (int j = 0; j < 4; j++)
 			{
-				hexNum = (raw_[i] >> j * 8) % 256;
-				res[c + 1] = dict[hexNum % 16];
-				res[c] = dict[(hexNum / 16) % 16];
+				hex_num = (_raw[i] >> j * 8) % 256;
+				ret_str[c + 1] = dict[hex_num % 16];
+				ret_str[c] = dict[(hex_num / 16) % 16];
 				c += 2;
 			}
 		}
-		return std::string(res);
+		return std::string(ret_str);
 	}
 private:
-	std::array<uint32_t, 4> raw_;
+	std::array<uint32_t, 4> _raw;
 	void Make(const unsigned char*data, size_t length)
 	{
 		static const uint32_t s[64] = {
@@ -66,10 +65,10 @@ private:
 			0x6fa87e4f, 0xfe2ce6e0, 0xa3014314, 0x4e0811a1,
 			0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391
 		};
-		raw_[0] = 0x67452301;
-		raw_[1] = 0xefcdab89;
-		raw_[2] = 0x98badcfe;
-		raw_[3] = 0x10325476;
+		_raw[0] = 0x67452301;
+		_raw[1] = 0xefcdab89;
+		_raw[2] = 0x98badcfe;
+		_raw[3] = 0x10325476;
 		size_t chunk_count = ((length + 8) >> 6) + 1;
 		uint32_t *message = new uint32_t[chunk_count << 4]{ 0 };
 		for (size_t i = 0; i < length; i++)
@@ -81,10 +80,10 @@ private:
 
 		for (size_t i = 0; i < chunk_count; i++)
 		{
-			uint32_t a = raw_[0];
-			uint32_t b = raw_[1];
-			uint32_t c = raw_[2];
-			uint32_t d = raw_[3];
+			uint32_t a = _raw[0];
+			uint32_t b = _raw[1];
+			uint32_t c = _raw[2];
+			uint32_t d = _raw[3];
 			uint32_t f, g;
 			for (uint32_t j = 0; j < 64; j++)
 			{
@@ -108,24 +107,24 @@ private:
 					f = ((c) ^ ((b) | (~d)));//I
 					g = (7 * j) & 15;
 				}
-				auto tmpd = d;
+				auto tmp_d = d;
 				d = c;
 				c = b;
-				b = b + LeftRotate(a + f + k[j] + message[(i << 4) + g], s[j]);
-				a = tmpd;
+				b = b + (((a + f + k[j] + message[(i << 4) + g]) << s[j]) | ((a + f + k[j] + message[(i << 4) + g]) >> (32 - s[j])));//b + LeftRotate(a + f + k[j] + message[(i << 4) + g], s[j]);
+				a = tmp_d;
 			}
-			raw_[0] += a;
-			raw_[1] += b;
-			raw_[2] += c;
-			raw_[3] += d;
+			_raw[0] += a;
+			_raw[1] += b;
+			_raw[2] += c;
+			_raw[3] += d;
 		}
-		delete message;
+		delete[] message;
 	}
 
-	uint32_t LeftRotate(uint32_t x, uint32_t n)
+	/*uint32_t LeftRotate(uint32_t x, uint32_t n)
 	{
 		return ((x << n) | (x >> (32 - n)));
-	}
+	}*/
 };
 }
 
