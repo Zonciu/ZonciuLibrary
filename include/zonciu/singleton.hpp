@@ -12,6 +12,7 @@
 #include <atomic>
 namespace zonciu
 {
+//Must call ::Init(args..) before using ::Get();
 template<class T>
 class Singleton
 {
@@ -67,6 +68,6 @@ private:
 // SINGLETON_INIT(class,param_1,param_2,...);
 // init before main()
 #define SINGLETON_INIT(type,...) \
-template<> typename zonciu::singleton::Singleton<type>::Creator zonciu::singleton::Singleton<type>::creator_ = {__VA_ARGS__}
+template<> typename zonciu::Singleton<type>::Creator zonciu::Singleton<type>::creator_ = {__VA_ARGS__}
 } // namespace zonciu
 #endif // ZONCIU_SINGLETON_HPP

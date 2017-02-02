@@ -8,7 +8,7 @@ namespace zonciu
 class Md5
 {
 public:
-	Md5(const unsigned char* data, size_t length)
+	Md5(const unsigned char* data, uint32_t length)
 	{
 		Make(data, length);
 	}
@@ -39,7 +39,7 @@ public:
 	}
 private:
 	std::array<uint32_t, 4> _raw;
-	void Make(const unsigned char*data, size_t length)
+	void Make(const unsigned char*data, uint32_t length)
 	{
 		static const uint32_t s[64] = {
 			7,12,17,22, 7,12,17,22, 7,12,17,22, 7,12,17,22,
@@ -69,9 +69,9 @@ private:
 		_raw[1] = 0xefcdab89;
 		_raw[2] = 0x98badcfe;
 		_raw[3] = 0x10325476;
-		size_t chunk_count = ((length + 8) >> 6) + 1;
+		uint32_t chunk_count = ((length + 8) >> 6) + 1;
 		uint32_t *message = new uint32_t[chunk_count << 4]{ 0 };
-		for (size_t i = 0; i < length; i++)
+		for (uint32_t i = 0; i < length; i++)
 		{
 			message[i >> 2] |= (data[i]) << ((i & 3) << 3);
 		}
