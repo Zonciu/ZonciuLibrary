@@ -5,10 +5,8 @@
 // separate zlib license, embedded below).
 
 #pragma once
-
-#ifndef MOODYCAMEL_BLOCKING_CONCURRENTQUEUE_H_ 
-#define MOODYCAMEL_BLOCKING_CONCURRENTQUEUE_H_
-
+#ifndef MOODYCAMEL_BLOCKING_CONCURRENTQUEUE_H 
+#define MOODYCAMEL_BLOCKING_CONCURRENTQUEUE_H
 #include "concurrentqueue.h"
 #include <type_traits>
 #include <cerrno>
@@ -294,7 +292,7 @@ namespace details
 					oldCount = m_count.load(std::memory_order_acquire);
 					if (oldCount >= 0 && m_sema.try_wait())
 						return true;
-					if (oldCount < 0 && m_count.compare_exchange_strong(oldCount, oldCount + 1, std::memory_order_relaxed))
+					if (oldCount < 0 && m_count.compare_exchange_strong(oldCount, oldCount + 1, std::memory_order_relaxed, std::memory_order_relaxed))
 						return false;
 				}
 			}
@@ -327,7 +325,7 @@ namespace details
 							oldCount = m_count.load(std::memory_order_acquire);
 							if (oldCount >= 0 && m_sema.try_wait())
 								break;
-							if (oldCount < 0 && m_count.compare_exchange_strong(oldCount, oldCount + 1, std::memory_order_relaxed))
+							if (oldCount < 0 && m_count.compare_exchange_strong(oldCount, oldCount + 1, std::memory_order_relaxed, std::memory_order_relaxed))
 								return 0;
 						}
 					}
@@ -982,5 +980,4 @@ inline void swap(BlockingConcurrentQueue<T, Traits>& a, BlockingConcurrentQueue<
 }
 
 }	// end namespace moodycamel
-
-#endif // MOODYCAMEL_BLOCKING_CONCURRENTQUEUE_H_ 
+#endif
