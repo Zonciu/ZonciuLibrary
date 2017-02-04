@@ -65,9 +65,11 @@ private:
     Singleton(Singleton&&) = delete;
     static Creator creator_;
 };
+#define SINGLETON(type) zonciu::Singleton<type>::Get()
+#define SINGLETON_INIT(type,...) zonciu::Singleton<type>::Init(__VA_ARGS__)
 // SINGLETON_INIT(class,param_1,param_2,...);
 // init before main()
-#define SINGLETON_INIT(type,...) \
+#define SINGLETON_PREINIT(type,...) \
 template<> typename zonciu::Singleton<type>::Creator zonciu::Singleton<type>::creator_ = {__VA_ARGS__}
 } // namespace zonciu
 #endif // ZONCIU_SINGLETON_HPP
