@@ -19,7 +19,8 @@
 #include <map>
 #include <queue>
 #include <vector>
-namespace zonciu {
+namespace zonciu
+{
 /*
  * Min heap timer.
  * api:
@@ -28,22 +29,28 @@ namespace zonciu {
  * | StopTimer
  * | StopAll
 */
-class MinHeapTimer {
+class MinHeapTimer
+{
     typedef std::function<void()> TimerHandle;
     typedef int TimerId;
     typedef std::chrono::duration<std::uint64_t, std::micro> IntervalType;
 private:
-    enum class Flag {
+    enum class Flag
+    {
         stop,
         once,
         forever
     };
-    struct Job {
+    struct Job
+    {
         Job(TimerId _id, Flag _flag, IntervalType _interval, TimerHandle _handle)
             :
-            id(_id), interval(_interval), handle(_handle), flag(_flag) {}
-        struct Comp {
-            bool operator()(const Job* const _left, const Job* const _right) {
+            id(_id), interval(_interval), handle(_handle), flag(_flag)
+        {}
+        struct Comp
+        {
+            bool operator()(const Job* const _left, const Job* const _right)
+            {
                 return (_left->next_time > _right->next_time);
             }
         };
@@ -54,11 +61,13 @@ private:
         Flag flag;
     };
 public:
-    MinHeapTimer() : jobs_id_count_(0), destruct_(false) {
+    MinHeapTimer() : jobs_id_count_(0), destruct_(false)
+    {
         observer_ = std::thread(&MinHeapTimer::Observe, this);
         worker_ = std::thread(&MinHeapTimer::Work, this);
     }
-    ~MinHeapTimer() {
+    ~MinHeapTimer()
+    {
         destruct_ = true;
         observer_.join();
         queue_.enqueue([]() {});
@@ -67,7 +76,8 @@ public:
     }
     //Wait and run
     //Return timer_id
-    TimerId SetInterval(std::uint32_t interval_milli, TimerHandle func) {
+    TimerId SetInterval(std::uint32_t interval_milli, TimerHandle func)
+    {
         using namespace std::chrono;
         TimerId ret_id = jobs_id_count_++;
         auto* tmp = new Job(ret_id, Flag::forever, IntervalType(milliseconds(interval_milli)), func);
@@ -80,7 +90,8 @@ public:
         return ret_id;
     }
     template<class _Rep, class _Period>
-    TimerId SetInterval(std::chrono::duration<_Rep, _Period> interval, TimerHandle func) {
+    TimerId SetInterval(std::chrono::duration<_Rep, _Period> interval, TimerHandle func)
+    {
         using namespace std::chrono;
         TimerId ret_id = jobs_id_count_++;
         auto* tmp = new Job(ret_id, Flag::forever, duration_cast<microseconds>(interval), func);
@@ -94,7 +105,8 @@ public:
     }
     //Wait and run once
     //Return timer_id
-    TimerId SetTimeout(std::uint32_t interval_milli, TimerHandle func) {
+    TimerId SetTimeout(std::uint32_t interval_milli, TimerHandle func)
+    {
         using namespace std::chrono;
         TimerId ret_id = jobs_id_count_++;
         auto* tmp = new Job(ret_id, Flag::once, IntervalType(milliseconds(interval_milli)), func);
@@ -107,7 +119,8 @@ public:
         return ret_id;
     }
     template<class _Rep, class _Period>
-    TimerId SetTimeout(std::chrono::duration<_Rep, _Period> interval, TimerHandle func) {
+    TimerId SetTimeout(std::chrono::duration<_Rep, _Period> interval, TimerHandle func)
+    {
         using namespace std::chrono;
         TimerId ret_id = jobs_id_count_++;
         auto* tmp = new Job(ret_id, Flag::once, duration_cast<microseconds>(interval), func);
@@ -120,20 +133,25 @@ public:
         return ret_id;
     }
     //Return false if timer not found
-    bool Remove(TimerId timer_id) {
+    bool Remove(TimerId timer_id)
+    {
         zonciu::SpinGuard idlck(id_lock_);
         auto it = jobs_id_.find(timer_id);
-        if (it != jobs_id_.end()) {
+        if (it != jobs_id_.end())
+        {
             it->second->flag = Flag::stop;
             return true;
-        } else
+        }
+        else
             return false;
     }
-    void Clear() {
+    void Clear()
+    {
         zonciu::SpinGuard idlck(id_lock_);
         zonciu::SpinGuard joblck(jobs_lock_);
         Job* tmp = nullptr;
-        while (!jobs_.empty()) {
+        while (!jobs_.empty())
+        {
             tmp = jobs_.top();
             jobs_.pop();
             delete tmp;
@@ -142,15 +160,20 @@ public:
         waiter_.Signal();
     }
 private:
-    void Observe() {
+    void Observe()
+    {
         using namespace std::chrono;
         Job* top = nullptr;
-        while (!destruct_) {
+        while (!destruct_)
+        {
             jobs_lock_.lock();
-            if (!jobs_.empty()) {
-                for (top = jobs_.top(); top->next_time <= high_resolution_clock::now(); top = jobs_.top()) {
+            if (!jobs_.empty())
+            {
+                for (top = jobs_.top(); top->next_time <= high_resolution_clock::now(); top = jobs_.top())
+                {
                     jobs_.pop();
-                    switch (top->flag) {
+                    switch (top->flag)
+                    {
                     case Flag::forever:
                     {
                         top->next_time += top->interval;
@@ -176,19 +199,24 @@ private:
                     }
                 }
                 jobs_lock_.unlock();
-                if (jobs_.top()->next_time > high_resolution_clock::now()) {
+                if (jobs_.top()->next_time > high_resolution_clock::now())
+                {
                     auto wait_time = duration_cast<microseconds>(jobs_.top()->next_time - high_resolution_clock::now());
                     waiter_.WaitFor((wait_time.count() > 0) ? wait_time.count() : 0);
                 }
-            } else {
+            }
+            else
+            {
                 jobs_lock_.unlock();
                 waiter_.Wait();
             }
         }
     }
-    void Work() {
+    void Work()
+    {
         TimerHandle handle;
-        while (!destruct_) {
+        while (!destruct_)
+        {
             queue_.wait_dequeue(handle);
             handle();
         }

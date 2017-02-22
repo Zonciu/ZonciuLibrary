@@ -107,7 +107,7 @@ public:
 private:
     void _Init(const unsigned int& _init_size)
     {
-        for (unsigned int i = 0;i < _init_size;++i)
+        for (unsigned int i = 0; i < _init_size; ++i)
         {
             _pool.enqueue(std::move(_Connect()));
             ++_current_size;
@@ -129,7 +129,7 @@ private:
         {
             throw std::runtime_error(
                 fmt::format("[mysqlcpp] Connect failed: {}",
-                mysql_error(*conn)));
+                    mysql_error(*conn)));
         }
     }
     const DbConfig _config;
@@ -140,7 +140,8 @@ class ResultValue
 {
 public:
     ResultValue() :
-        _null(true) {}
+        _null(true)
+    {}
     ResultValue(const char* _obj) :
         _data((_obj == nullptr) ? "" : _obj),
         _null(_obj == nullptr)
@@ -213,7 +214,7 @@ public:
         //Get filed name
         const unsigned int field_count = _mysql_result->field_count;
         _field = new FieldType;
-        for (unsigned int i = 0; i < field_count;++i)
+        for (unsigned int i = 0; i < field_count; ++i)
         {
             _field->insert(
                 std::make_pair(mysql_fetch_field(_mysql_result)->name, i));
@@ -225,7 +226,7 @@ public:
             _mysql_row = mysql_fetch_row(_mysql_result))
         {
             _row.resize(field_count);
-            for (int i = field_count - 1; i > -1;--i)
+            for (int i = field_count - 1; i > -1; --i)
             {
                 _row[i] = std::move(ResultValue(_mysql_row[i]));
             }
@@ -303,7 +304,7 @@ class DbManager
 public:
     ~DbManager()
     {
-        for (auto it = _db_list.begin();it != _db_list.end();)
+        for (auto it = _db_list.begin(); it != _db_list.end();)
         {
             delete it->second;
             it = _db_list.erase(it);
